@@ -64,9 +64,9 @@ type CortexEntityElementMetadata struct {
 	Value ScalarOrMap `yaml:"value"`
 }
 
-func tableCortexEntities() *plugin.Table {
+func tableCortexEntity() *plugin.Table {
 	return &plugin.Table{
-		Name:        "cortex_entities",
+		Name:        "cortex_entity",
 		Description: "Cortex list entities api.",
 		List: &plugin.ListConfig{
 			Hydrate: listEntities,
@@ -91,10 +91,10 @@ func tableCortexEntities() *plugin.Table {
 func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	config := GetConfig(d.Connection)
 	var response CortexEntityResponse
-
 	err := req.C().
 		SetJsonUnmarshal(yaml.Unmarshal).
-		Get("https://api.getcortexapp.com/api/v1/catalog").
+		SetBaseURL(*config.BaseURL).
+		Get("/api/v1/catalog").
 		SetBearerAuthToken(*config.ApiKey).
 		SetQueryParam("yaml", "false").
 		SetQueryParam("includeArchived", "false").
