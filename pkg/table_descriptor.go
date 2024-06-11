@@ -17,9 +17,9 @@ type CortexDescriptorsResponse struct {
 	Total       int      `yaml:"total"`
 }
 
-func tableCortexDescriptors() *plugin.Table {
+func tableCortexDescriptor() *plugin.Table {
 	return &plugin.Table{
-		Name:        "cortex_descriptors",
+		Name:        "cortex_descriptor",
 		Description: "Cortex openapi descriptors.",
 		List: &plugin.ListConfig{
 			Hydrate: listDescriptors,
@@ -48,7 +48,8 @@ func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 	var response CortexDescriptorsResponse
 	err := req.C().
 		SetJsonUnmarshal(yaml.Unmarshal).
-		Get("https://api.getcortexapp.com/api/v1/catalog/descriptors").
+		SetBaseURL(*config.BaseURL).
+		Get("/api/v1/catalog/descriptors").
 		SetBearerAuthToken(*config.ApiKey).
 		SetQueryParam("yaml", "false").
 		Do(ctx).
