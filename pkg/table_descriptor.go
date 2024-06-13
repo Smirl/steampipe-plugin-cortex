@@ -2,6 +2,8 @@ package pkg
 
 import (
 	"context"
+	"strconv"
+	"time"
 
 	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
@@ -46,23 +48,34 @@ func tableCortexDescriptor() *plugin.Table {
 func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	config := GetConfig(d.Connection)
 	var response CortexDescriptorsResponse
-	err := req.C().
-		SetJsonUnmarshal(yaml.Unmarshal).
-		SetBaseURL(*config.BaseURL).
-		Get("/api/v1/catalog/descriptors").
-		SetBearerAuthToken(*config.ApiKey).
-		SetQueryParam("yaml", "false").
-		Do(ctx).
-		Into(&response)
-	if err != nil {
-		return nil, err
-	}
-	for _, result := range response.Descriptors {
-		// send the item to steampipe
-		d.StreamListItem(ctx, result.Info)
-		// Context can be cancelled due to manual cancellation or the limit has been hit
-		if d.RowsRemaining(ctx) == 0 {
-			return nil, nil
+	var page int = 0
+	for {
+		err := req.C().
+			SetJsonUnmarshal(yaml.Unmarshal).
+			SetBaseURL(*config.BaseURL).
+			Get("/api/v1/catalog/descriptors").
+			SetRetryCount(2).
+			SetRetryBackoffInterval(time.Second, 5*time.Second).
+			SetBearerAuthToken(*config.ApiKey).
+			SetQueryParam("yaml", "false").
+			SetQueryParam("pageSize", "1000").
+			SetQueryParam("page", strconv.Itoa(page)).
+			Do(ctx).
+			Into(&response)
+		if err != nil {
+			return nil, err
+		}
+		for _, result := range response.Descriptors {
+			// send the item to steampipe
+			d.StreamListItem(ctx, result.Info)
+			// Context can be cancelled due to manual cancellation or the limit has been hit
+			if d.RowsRemaining(ctx) == 0 {
+				return nil, nil
+			}
+		}
+		page++
+		if page == response.TotalPages {
+			break
 		}
 	}
 	return nil, nil
