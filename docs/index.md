@@ -1,4 +1,18 @@
-<!-- Ensure this matches docs/index.md -->
+---
+organization: Cortex
+category: ["software development"]
+icon_url: "/images/plugins/smirl/cortex.svg"
+brand_color: "#25074d"
+display_name: "Cortex"
+short_name: "cortex"
+description: "Steampipe plugin for Cortex developer portal."
+og_description: "The Internal Developer Portal eliminating “developer tax” with paved paths to production"
+og_image: "/images/plugins/smirl/cortex-social-graphic.png"
+engines: ["steampipe", "sqlite", "postgres", "export"]
+---
+
+<!-- Ensure this matches README.md -->
+
 # Cortex + Steampipe
 
 [Steampipe](https://steampipe.io) is an open-source zero-ETL engine to instantly
