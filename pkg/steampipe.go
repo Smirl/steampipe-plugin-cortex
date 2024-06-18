@@ -52,6 +52,7 @@ func SteampipePlugin(ctx context.Context) *plugin.Plugin {
 		TableMap: map[string]*plugin.Table{
 			"cortex_descriptor": tableCortexDescriptor(),
 			"cortex_entity":     tableCortexEntity(),
+			"cortex_team":       tableCortexTeam(),
 		},
 	}
 	return p
