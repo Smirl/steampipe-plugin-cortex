@@ -2,10 +2,24 @@ package pkg
 
 import (
 	"context"
+	"time"
 
+	"github.com/imroc/req/v3"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"gopkg.in/yaml.v2"
 )
+
+// Create a req http client for the Cortex API.
+// This will set the BaseURL and Auth from config, as well as common retry settings.
+func CortexHTTPClient(ctx context.Context, config *SteampipeConfig) *req.Client {
+	return req.C().
+		SetBaseURL(*config.BaseURL).
+		SetJsonUnmarshal(yaml.Unmarshal).
+		SetCommonRetryCount(2).
+		SetCommonRetryBackoffInterval(time.Second, 5*time.Second).
+		SetCommonBearerAuthToken(*config.ApiKey)
+}
 
 // Get field from the data and for each item of type T, get the nested field "child"
 // always returns a string array

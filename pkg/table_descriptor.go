@@ -3,13 +3,10 @@ package pkg
 import (
 	"context"
 	"strconv"
-	"time"
 
-	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
-	"gopkg.in/yaml.v2"
 )
 
 type CortexDescriptorsResponse struct {
@@ -48,20 +45,14 @@ func tableCortexDescriptor() *plugin.Table {
 func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
+	client := CortexHTTPClient(ctx, config)
 
 	var response CortexDescriptorsResponse
 	var page int = 0
 	for {
 		logger.Debug("listDescriptors", "page", page)
-		err := req.C().
-			SetJsonUnmarshal(yaml.Unmarshal).
-			SetBaseURL(*config.BaseURL).
+		err := client.
 			Get("/api/v1/catalog/descriptors").
-			// Backoff and Retry
-			SetRetryCount(2).
-			SetRetryBackoffInterval(time.Second, 5*time.Second).
-			// Authentication
-			SetBearerAuthToken(*config.ApiKey).
 			// Options
 			SetQueryParam("yaml", "false").
 			// Pagination

@@ -3,13 +3,10 @@ package pkg
 import (
 	"context"
 	"strconv"
-	"time"
 
-	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
-	"gopkg.in/yaml.v2"
 )
 
 type ScalarOrMap struct {
@@ -97,6 +94,7 @@ func tableCortexEntity() *plugin.Table {
 func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
+	client := CortexHTTPClient(ctx, config)
 
 	// Archive filter
 	var archived string = "false"
@@ -116,15 +114,8 @@ func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDat
 	var page int = 0
 	for {
 		logger.Debug("listEntities", "page", page)
-		err := req.C().
-			SetJsonUnmarshal(yaml.Unmarshal).
-			SetBaseURL(*config.BaseURL).
+		err := client.
 			Get("/api/v1/catalog").
-			// Backoff and Retry
-			SetRetryCount(2).
-			SetRetryBackoffInterval(time.Second, 5*time.Second).
-			// Authentication
-			SetBearerAuthToken(*config.ApiKey).
 			// Filters
 			SetQueryParam("includeArchived", archived).
 			SetQueryParam("types", types).
