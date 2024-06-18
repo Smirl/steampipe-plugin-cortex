@@ -54,7 +54,6 @@ func listTeams(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) 
 
 	var response CortexTeamResponse
 	err := client.
-		EnableDumpAllToFile("/tmp/cortex").
 		Get("/api/v1/teams").
 		SetQueryParam("includeTeamsWithoutMembers", "true").
 		Do(ctx).
