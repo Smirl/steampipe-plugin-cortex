@@ -31,7 +31,7 @@ limit 10
 
 ## Documentation
 
-- **[Table definitions & examples →](/plugins/smirl/cortex/tables)**
+- **[Table definitions & examples →](./docs/tables/)**
 
 ## Get started
 
