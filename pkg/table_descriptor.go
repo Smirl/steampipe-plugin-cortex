@@ -46,23 +46,31 @@ func tableCortexDescriptor() *plugin.Table {
 }
 
 func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
+
 	var response CortexDescriptorsResponse
 	var page int = 0
 	for {
+		logger.Debug("listDescriptors", "page", page)
 		err := req.C().
 			SetJsonUnmarshal(yaml.Unmarshal).
 			SetBaseURL(*config.BaseURL).
 			Get("/api/v1/catalog/descriptors").
+			// Backoff and Retry
 			SetRetryCount(2).
 			SetRetryBackoffInterval(time.Second, 5*time.Second).
+			// Authentication
 			SetBearerAuthToken(*config.ApiKey).
+			// Options
 			SetQueryParam("yaml", "false").
+			// Pagination
 			SetQueryParam("pageSize", "1000").
 			SetQueryParam("page", strconv.Itoa(page)).
 			Do(ctx).
 			Into(&response)
 		if err != nil {
+			logger.Error("listDescriptors", "Error", err)
 			return nil, err
 		}
 		for _, result := range response.Descriptors {

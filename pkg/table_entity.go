@@ -72,6 +72,10 @@ func tableCortexEntity() *plugin.Table {
 		Description: "Cortex list entities api.",
 		List: &plugin.ListConfig{
 			Hydrate: listEntities,
+			KeyColumns: []*plugin.KeyColumn{
+				{Name: "archived", Require: plugin.Optional},
+				{Name: "type", Require: plugin.Optional},
+			},
 		},
 		Columns: []*plugin.Column{
 			{Name: "name", Type: proto.ColumnType_STRING, Description: "Pretty name of the entity."},
@@ -91,28 +95,53 @@ func tableCortexEntity() *plugin.Table {
 }
 
 func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
+
+	// Archive filter
+	var archived string = "false"
+	if d.EqualsQuals["archived"] != nil && d.EqualsQuals["archived"].GetBoolValue() {
+		archived = "true"
+	}
+	logger.Info("listEntities", "archived", archived)
+	// Type filter
+	// When doing a "where in ()" steampipe does multiple separate calls to listEntities
+	var types string
+	if d.EqualsQuals["type"] != nil {
+		types = d.EqualsQuals["type"].GetStringValue()
+	}
+	logger.Info("listEntities", "types", types)
+
 	var response CortexEntityResponse
 	var page int = 0
 	for {
+		logger.Debug("listEntities", "page", page)
 		err := req.C().
 			SetJsonUnmarshal(yaml.Unmarshal).
 			SetBaseURL(*config.BaseURL).
 			Get("/api/v1/catalog").
+			// Backoff and Retry
 			SetRetryCount(2).
 			SetRetryBackoffInterval(time.Second, 5*time.Second).
+			// Authentication
 			SetBearerAuthToken(*config.ApiKey).
+			// Filters
+			SetQueryParam("includeArchived", archived).
+			SetQueryParam("types", types).
+			// Options
 			SetQueryParam("yaml", "false").
-			SetQueryParam("includeArchived", "false").
 			SetQueryParam("includeMetadata", "true").
 			SetQueryParam("includeLinks", "true").
 			SetQueryParam("includeSlackChannels", "true").
 			SetQueryParam("includeOwners", "true").
+			SetQueryParam("includeHierarchyFields", "true").
+			// Pagination
 			SetQueryParam("pageSize", "1000").
 			SetQueryParam("page", strconv.Itoa(page)).
 			Do(ctx).
 			Into(&response)
 		if err != nil {
+			logger.Error("listEntities", "Error", err)
 			return nil, err
 		}
 		for _, result := range response.Entities {

@@ -11,7 +11,22 @@ drive action to continuously improve software.
 For example:
 
 ```sql
-select * from cortex_entity limit 10
+select
+    "name",
+    "tag",
+    "description",
+    "type",
+    "parents",
+    "groups",
+    "metadata",
+    "last_updated",
+    "links",
+    "archived",
+    "repository",
+    "slack_channels"
+from
+    cortex_entity
+limit 10
 ```
 
 ## Documentation
