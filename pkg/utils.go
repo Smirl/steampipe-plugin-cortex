@@ -7,7 +7,7 @@ import (
 	"github.com/imroc/req/v3"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Create a req http client for the Cortex API.
