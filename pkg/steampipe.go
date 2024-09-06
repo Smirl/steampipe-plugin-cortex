@@ -50,9 +50,10 @@ func SteampipePlugin(ctx context.Context) *plugin.Plugin {
 			Schema:      map[string]*schema.Attribute{"api_key": {Type: schema.TypeString}},
 		},
 		TableMap: map[string]*plugin.Table{
-			"cortex_descriptor": tableCortexDescriptor(),
-			"cortex_entity":     tableCortexEntity(),
-			"cortex_team":       tableCortexTeam(),
+			"cortex_descriptor":      tableCortexDescriptor(),
+			"cortex_entity":          tableCortexEntity(),
+			"cortex_team":            tableCortexTeam(),
+			"cortex_scorecard_score": tableCortexScorecardScore(),
 		},
 	}
 	return p
