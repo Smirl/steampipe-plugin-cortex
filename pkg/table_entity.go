@@ -51,7 +51,7 @@ type CortexEntityElement struct {
 	Archived    bool                          `yaml:"isArchived"`
 	Git         CortexGithub                  `yaml:"git"`
 	Slack       []CortexSlackChannel          `yaml:"slackChannels"`
-	// Members TODO
+	Owners      CortexEntityOwners            `yaml:"owners"`
 }
 
 type CortexEntityElementHierarchy struct {
@@ -61,6 +61,19 @@ type CortexEntityElementHierarchy struct {
 type CortexEntityElementMetadata struct {
 	Key   string      `yaml:"key"`
 	Value ScalarOrMap `yaml:"value"`
+}
+
+type CortexEntityOwners struct {
+	Teams       []CortexEntityOwnersTeam       `yaml:"teams"`
+	Individuals []CortexEntityOwnersIndividual `yaml:"individuals"`
+}
+
+type CortexEntityOwnersTeam struct {
+	Tag string `yaml:"tag"`
+}
+
+type CortexEntityOwnersIndividual struct {
+	Email string `yaml:"email"`
 }
 
 func tableCortexEntity() *plugin.Table {
@@ -87,6 +100,8 @@ func tableCortexEntity() *plugin.Table {
 			{Name: "archived", Type: proto.ColumnType_BOOL, Description: "Is archived."},
 			{Name: "repository", Type: proto.ColumnType_STRING, Description: "Git repo full name", Transform: transform.FromField("Git.Repository")},
 			{Name: "slack_channels", Type: proto.ColumnType_JSON, Description: "List of string slack channels"},
+			{Name: "owner_teams", Type: proto.ColumnType_JSON, Description: "List of owning team tags", Transform: FromStructSlice[CortexEntityOwnersTeam]("Owners.Teams", "Tag")},
+			{Name: "owner_individuals", Type: proto.ColumnType_JSON, Description: "List of owning individuals emails", Transform: FromStructSlice[CortexEntityOwnersIndividual]("Owners.Individuals", "Email")},
 		},
 	}
 }

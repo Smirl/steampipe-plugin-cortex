@@ -18,6 +18,8 @@ see the descriptor (yaml definition) of an entity use the `descriptor` table.
 |`archived`|Is archived.|
 |`repository`|Git repo full name|
 |`slack_channels`|List of string slack channels|
+|`owner_teams`|List of owning team tags|
+|`owner_individuals`|List of owning individuals emails|
 
 ## Examples
 
