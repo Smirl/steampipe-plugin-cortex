@@ -1,4 +1,4 @@
-package pkg
+package cortex
 
 import (
 	"context"

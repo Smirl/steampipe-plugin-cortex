@@ -1,4 +1,4 @@
-package pkg
+package cortex
 
 type Cortex struct {
 	Openapi string     `yaml:"openapi"`
