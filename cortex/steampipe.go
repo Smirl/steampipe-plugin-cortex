@@ -1,4 +1,4 @@
-package pkg
+package cortex
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func GetConfig(connection *plugin.Connection) *SteampipeConfig {
 	return &config
 }
 
-func SteampipePlugin(ctx context.Context) *plugin.Plugin {
+func Plugin(ctx context.Context) *plugin.Plugin {
 	p := &plugin.Plugin{
 		Name:             "steampipe-plugin-cortex",
 		DefaultTransform: transform.FromGo().NullIfZero(),
