@@ -11,22 +11,7 @@ drive action to continuously improve software.
 For example:
 
 ```sql
-select
-    "name",
-    "tag",
-    "description",
-    "type",
-    "parents",
-    "groups",
-    "metadata",
-    "last_updated",
-    "links",
-    "archived",
-    "repository",
-    "slack_channels"
-from
-    cortex_entity
-limit 10
+select * from cortex_entity limit 10
 ```
 
 ## Documentation
@@ -37,7 +22,7 @@ limit 10
 
 ### Install
 
-Download and install the latest AWS plugin:
+Download and install the latest:
 
 ```bash
 steampipe plugin install smirl/cortex
@@ -72,3 +57,7 @@ connection "cortex" {
     # base_url = "https://app.cortex.mycompany.com"
 }
 ```
+
+## Get Involved
+
+Open source: https://github.com/smirl/steampipe-plugin-cortex

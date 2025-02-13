@@ -1,5 +1,5 @@
 ---
-organization: Cortex
+organization: smirl
 category: ["software development"]
 icon_url: "/images/plugins/smirl/cortex.svg"
 brand_color: "#25074d"
@@ -36,7 +36,7 @@ select * from cortex_entity limit 10
 
 ### Install
 
-Download and install the latest AWS plugin:
+Download and install the latest:
 
 ```bash
 steampipe plugin install smirl/cortex
@@ -71,3 +71,7 @@ connection "cortex" {
     # base_url = "https://app.cortex.mycompany.com"
 }
 ```
+
+## Get Involved
+
+Open source: https://github.com/smirl/steampipe-plugin-cortex
