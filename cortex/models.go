@@ -22,6 +22,7 @@ type CortexInfo struct {
 	Oncall         CortexOncall           `yaml:"x-cortex-oncall,omitempty"`
 	Issues         CortexIssues           `yaml:"x-cortex-issues,omitempty"`
 	Dependency     CortexDependency       `yaml:"x-cortex-dependency,omitempty"`
+	SLOs           CortexSLOs             `yaml:"x-cortex-slos,omitempty"`
 }
 
 type CortexTag struct {
@@ -110,6 +111,15 @@ type CortexDependencyCortex struct {
 
 type CortexDependencyAWS struct {
 	Tags []Tag `yaml:"tags"`
+}
+
+type CortexSLOs struct {
+	NewRelic []CortexSLO `yaml:"newrelic"`
+}
+
+type CortexSLO struct {
+	ID    string `yaml:"id"`
+	Alias string `yaml:"alias,omitempty"`
 }
 
 type Tag struct {

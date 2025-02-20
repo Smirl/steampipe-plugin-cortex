@@ -38,6 +38,7 @@ func tableCortexDescriptor() *plugin.Table {
 			{Name: "repository", Type: proto.ColumnType_STRING, Description: "Git repo full name", Transform: transform.FromField("Git.Github.Repository")},
 			{Name: "victorops", Type: proto.ColumnType_STRING, Description: "Victorops team slug", Transform: transform.FromField("Oncall.VictorOps.ID")},
 			{Name: "jira", Type: proto.ColumnType_JSON, Description: "List of jira projects", Transform: transform.FromField("Issues.Jira.Projects").Transform(transform.EnsureStringArray)},
+			{Name: "slos", Type: proto.ColumnType_JSON, Description: "SLOs from each integration if any", Transform: transform.FromField("SLOs")},
 		},
 	}
 }
