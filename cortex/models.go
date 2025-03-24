@@ -23,6 +23,7 @@ type CortexInfo struct {
 	Issues         CortexIssues           `yaml:"x-cortex-issues,omitempty"`
 	Dependency     CortexDependency       `yaml:"x-cortex-dependency,omitempty"`
 	SLOs           CortexSLOs             `yaml:"x-cortex-slos,omitempty"`
+	StaticAnalysis CortexStaticAnalysis   `yaml:"x-cortex-static-analysis,omitempty"`
 }
 
 type CortexTag struct {
@@ -125,4 +126,13 @@ type CortexSLO struct {
 type Tag struct {
 	Key   string `yaml:"key"`
 	Value string `yaml:"value"`
+}
+
+type CortexStaticAnalysis struct {
+	Sonarqube CortexStaticAnalysisSonarqube `yaml:"sonarqube"`
+}
+
+type CortexStaticAnalysisSonarqube struct {
+	Project string `yaml:"project"`
+	Alias   string `yaml:"alias,omitempty"`
 }
