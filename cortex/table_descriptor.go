@@ -75,7 +75,7 @@ func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.Hydrate
 			}
 		}
 		page++
-		if page == response.TotalPages {
+		if page >= response.TotalPages {
 			break
 		}
 	}
