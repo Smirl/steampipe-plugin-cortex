@@ -2,7 +2,7 @@
 organization: smirl
 category: ["software development"]
 icon_url: "/images/plugins/smirl/cortex.svg"
-brand_color: "#25074d"
+brand_color: "#653ee8"
 display_name: "Cortex"
 short_name: "cortex"
 description: "Steampipe plugin for Cortex developer portal."
@@ -25,7 +25,7 @@ drive action to continuously improve software.
 For example:
 
 ```sql
-select * from cortex_entity limit 10
+select tag, owner_teams, metadata -> 'custom_field' from cortex_entity limit 10
 ```
 
 ## Documentation
