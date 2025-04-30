@@ -150,6 +150,8 @@ func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDat
 			logger.Error("listEntities", "Error", err)
 			return nil, err
 		}
+		logger.Debug("listEntities", "totalPages", response.TotalPages, "total", response.Total)
+
 		for _, result := range response.Entities {
 			// send the item to steampipe
 			d.StreamListItem(ctx, result)
@@ -159,7 +161,7 @@ func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDat
 			}
 		}
 		page++
-		if page == response.TotalPages {
+		if page >= response.TotalPages {
 			break
 		}
 	}

@@ -181,7 +181,7 @@ func listScorecardScores(ctx context.Context, d *plugin.QueryData, h *plugin.Hyd
 			}
 		}
 		page++
-		if page == response.TotalPages {
+		if page >= response.TotalPages {
 			break
 		}
 	}
