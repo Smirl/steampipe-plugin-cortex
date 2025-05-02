@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,6 +36,53 @@ func prepareScorecardScoresResponse(t *testing.T, scores []*CortexServiceScore, 
 		t.Fatalf("Failed to marshal response: %v", err)
 	}
 	return responseBytes
+}
+
+func TestTableCortexScorecardScore(t *testing.T) {
+	g := NewWithT(t)
+	table := tableCortexScorecardScore()
+
+	// Check basic table properties.
+	g.Expect(table).ToNot(BeNil())
+	g.Expect(table.Name).To(Equal("cortex_scorecard_score"))
+	g.Expect(table.Description).To(Equal("Cortex scorecard score api."))
+
+	// Check list configuration.
+	g.Expect(table.List).ToNot(BeNil())
+	g.Expect(table.List.Hydrate).ToNot(BeNil())
+	g.Expect(table.List.KeyColumns).To(HaveLen(1))
+	g.Expect(table.List.KeyColumns[0].Name).To(Equal("scorecard_tag"))
+	g.Expect(table.List.KeyColumns[0].Require).To(Equal(plugin.Required))
+
+	// Define expected columns.
+	expectedColumns := []struct {
+		Name string
+		Type proto.ColumnType
+	}{
+		{"scorecard_tag", proto.ColumnType_STRING},
+		{"scorecard_name", proto.ColumnType_STRING},
+		{"service_tag", proto.ColumnType_STRING},
+		{"service_name", proto.ColumnType_STRING},
+		{"service_groups", proto.ColumnType_JSON},
+		{"last_evaluated", proto.ColumnType_STRING},
+		{"rule_identifier", proto.ColumnType_STRING},
+		{"rule_title", proto.ColumnType_STRING},
+		{"rule_description", proto.ColumnType_STRING},
+		{"rule_expression", proto.ColumnType_STRING},
+		{"rule_effective_from", proto.ColumnType_STRING},
+		{"rule_level_name", proto.ColumnType_STRING},
+		{"rule_level_number", proto.ColumnType_INT},
+		{"rule_weight", proto.ColumnType_INT},
+		{"rule_score", proto.ColumnType_INT},
+		{"rule_pass", proto.ColumnType_BOOL},
+	}
+
+	// Check that the table has the expected columns.
+	g.Expect(table.Columns).To(HaveLen(len(expectedColumns)))
+	for i, exp := range expectedColumns {
+		g.Expect(table.Columns[i].Name).To(Equal(exp.Name))
+		g.Expect(table.Columns[i].Type).To(Equal(exp.Type))
+	}
 }
 
 func TestListScorecardScoresSinglePage(t *testing.T) {

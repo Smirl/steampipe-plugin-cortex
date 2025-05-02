@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,6 +22,43 @@ func prepareTeamResponse(t *testing.T, teams []CortexTeamElement) []byte {
 		t.Fatalf("Failed to marshal response: %v", err)
 	}
 	return responseBytes
+}
+
+func TestTableCortexTeam(t *testing.T) {
+	g := NewWithT(t)
+	table := tableCortexTeam()
+
+	// Check basic table properties.
+	g.Expect(table).ToNot(BeNil())
+	g.Expect(table.Name).To(Equal("cortex_team"))
+	g.Expect(table.Description).To(Equal("Cortex list teams api."))
+
+	// Check list configuration.
+	g.Expect(table.List).ToNot(BeNil())
+	g.Expect(table.List.Hydrate).ToNot(BeNil())
+
+	// Define expected columns.
+	expectedColumns := []struct {
+		Name string
+		Type proto.ColumnType
+	}{
+		{"name", proto.ColumnType_STRING},
+		{"tag", proto.ColumnType_STRING},
+		{"parents", proto.ColumnType_JSON},
+		{"children", proto.ColumnType_JSON},
+		{"metadata", proto.ColumnType_JSON},
+		{"links", proto.ColumnType_JSON},
+		{"archived", proto.ColumnType_BOOL},
+		{"slack_channels", proto.ColumnType_JSON},
+		{"members", proto.ColumnType_JSON},
+	}
+
+	// Check that the table has the expected columns.
+	g.Expect(table.Columns).To(HaveLen(len(expectedColumns)))
+	for i, exp := range expectedColumns {
+		g.Expect(table.Columns[i].Name).To(Equal(exp.Name))
+		g.Expect(table.Columns[i].Type).To(Equal(exp.Type))
+	}
 }
 
 func TestListTeamsSinglePage(t *testing.T) {
