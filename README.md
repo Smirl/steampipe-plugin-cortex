@@ -1,7 +1,7 @@
 <!-- Ensure this matches docs/index.md -->
 # Cortex + Steampipe
 
-[![Coverage Status](https://coveralls.io/repos/github/Smirl/steampipe-plugin-cortex/badge.svg?branch=master)](https://coveralls.io/github/Smirl/steampipe-plugin-cortex?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/Smirl/steampipe-plugin-cortex/badge.svg?branch=main)](https://coveralls.io/github/Smirl/steampipe-plugin-cortex?branch=main)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Build](https://github.com/smirl/steampipe-plugin-cortex/actions/workflows/main.yaml/badge.svg)](https://github.com/Smirl/steampipe-plugin-cortex/actions/workflows/main.yaml)
 
