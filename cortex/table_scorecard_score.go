@@ -117,13 +117,13 @@ func listScorecardScoresHydrator(ctx context.Context, d *plugin.QueryData, h *pl
 	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
 	client := CortexHTTPClient(ctx, config)
-	hydratorWriter := QueryDataWriter{d}
+	writer := QueryDataWriter{d}
 	scorecardTag := d.EqualsQuals["scorecard_tag"].GetStringValue()
 	logger.Info("listScorecardScoresHydrator", "scorecardTag", scorecardTag)
-	return nil, listScorecardScores(ctx, client, &hydratorWriter, scorecardTag)
+	return nil, listScorecardScores(ctx, client, &writer, scorecardTag)
 }
 
-func listScorecardScores(ctx context.Context, client *req.Client, writer *QueryDataWriter, scorecardTag string) error {
+func listScorecardScores(ctx context.Context, client *req.Client, writer HydratorWriter, scorecardTag string) error {
 	logger := plugin.Logger(ctx)
 
 	// Get information about the scorecard to enrich the data
