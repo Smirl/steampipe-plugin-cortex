@@ -1,0 +1,32 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - name: Run tests
+      run: go test ./...
+
+    - name: Release Drafter
+      uses: release-drafter/release-drafter@v6
+      if: ${{ github.ref_name == github.event.repository.default_branch }}
+      with:
+        disable-autolabeler: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
