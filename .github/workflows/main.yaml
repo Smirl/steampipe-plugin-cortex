@@ -29,6 +29,9 @@ jobs:
 
     - name: Coveralls
       uses: coverallsapp/github-action@v2
+      with:
+        file: coverage.out
+        format: golang
 
     - name: Release Drafter
       uses: release-drafter/release-drafter@v6
