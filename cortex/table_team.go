@@ -146,7 +146,7 @@ func getTeamRelationships(ctx context.Context, client *req.Client) (map[string]R
 		child := relationships[edges.Child]
 		parent := relationships[edges.Parent]
 		child.Parents = append(child.Parents, edges.Parent)
-		parent.Children = append(parent.Children, edges.Parent)
+		parent.Children = append(parent.Children, edges.Child)
 		relationships[edges.Child] = child
 		relationships[edges.Parent] = parent
 	}

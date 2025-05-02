@@ -56,8 +56,6 @@ func TestListTeamsSinglePage(t *testing.T) {
 	g.Expect(writer.Items[0].Children[0]).To(Equal("child1"))
 	g.Expect(writer.Items[0].Parents).To(HaveLen(1))
 	g.Expect(writer.Items[0].Parents[0]).To(Equal("parent1"))
-	g.Expect(writer.Items[0].Parents).To(HaveLen(1))
-	g.Expect(writer.Items[0].Parents[0]).To(Equal("parent1"))
 }
 
 func TestListTeamsError(t *testing.T) {
@@ -120,7 +118,7 @@ func TestGetTeamRelationshipsSuccess(t *testing.T) {
 	g.Expect(relationships).To(HaveKey("child1"))
 	g.Expect(relationships["child1"].Parents).To(ContainElement("parent1"))
 	g.Expect(relationships).To(HaveKey("parent1"))
-	g.Expect(relationships["parent1"].Children).To(ContainElement("parent1"))
+	g.Expect(relationships["parent1"].Children).To(ContainElement("child1"))
 }
 
 func TestGetTeamRelationshipsHTTPError(t *testing.T) {
