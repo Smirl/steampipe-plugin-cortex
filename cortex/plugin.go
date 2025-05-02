@@ -24,6 +24,7 @@ func GetConfig(connection *plugin.Connection) *SteampipeConfig {
 	if connection == nil || connection.Config == nil {
 		return NewSteampipeConfig("", DefaultBaseURL)
 	}
+	// Even though we return a ptr, steampipe code calls helpers.DereferencePointer
 	config, _ := connection.Config.(SteampipeConfig)
 
 	// Read the API key from the environment and override the value in the config
@@ -46,8 +47,12 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 		Name:             "steampipe-plugin-cortex",
 		DefaultTransform: transform.FromGo().NullIfZero(),
 		ConnectionConfigSchema: &plugin.ConnectionConfigSchema{
-			NewInstance: func() interface{} { return NewSteampipeConfig("", DefaultBaseURL) },
-			Schema:      map[string]*schema.Attribute{"api_key": {Type: schema.TypeString}},
+			NewInstance: func() interface{} {
+				return NewSteampipeConfig("", DefaultBaseURL)
+			},
+			Schema: map[string]*schema.Attribute{
+				"api_key": {Type: schema.TypeString},
+			},
 		},
 		TableMap: map[string]*plugin.Table{
 			"cortex_descriptor":      tableCortexDescriptor(),
