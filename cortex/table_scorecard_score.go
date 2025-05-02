@@ -2,8 +2,10 @@ package cortex
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -85,7 +87,7 @@ func tableCortexScorecardScore() *plugin.Table {
 		Name:        "cortex_scorecard_score",
 		Description: "Cortex scorecard score api.",
 		List: &plugin.ListConfig{
-			Hydrate: listScorecardScores,
+			Hydrate: listScorecardScoresHydrator,
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "scorecard_tag", Require: plugin.Required},
 			},
@@ -111,23 +113,35 @@ func tableCortexScorecardScore() *plugin.Table {
 	}
 }
 
-func listScorecardScores(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listScorecardScoresHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
 	client := CortexHTTPClient(ctx, config)
+	writer := QueryDataWriter{d}
+	scorecardTag := d.EqualsQuals["scorecard_tag"].GetStringValue()
+	logger.Info("listScorecardScoresHydrator", "scorecardTag", scorecardTag)
+	return nil, listScorecardScores(ctx, client, &writer, scorecardTag)
+}
 
-	var scorecardTag string = d.EqualsQuals["scorecard_tag"].GetStringValue()
+func listScorecardScores(ctx context.Context, client *req.Client, writer HydratorWriter, scorecardTag string) error {
+	logger := plugin.Logger(ctx)
 
 	// Get information about the scorecard to enrich the data
 	var scorecardResponse CortexScorecardResponse
-	err := client.
+	resp := client.
 		Get("/api/v1/scorecards/{tag}").
 		SetPathParam("tag", scorecardTag).
-		Do(ctx).
-		Into(&scorecardResponse)
+		Do(ctx)
+
+	// Check for HTTP errors
+	if resp.IsErrorState() {
+		logger.Error("listScorecardScores getScorecard", "Status", resp.Status, "Body", resp.String())
+		return fmt.Errorf("error from cortex API %s: %s", resp.Status, resp.String())
+	}
+	err := resp.Into(&scorecardResponse)
 	if err != nil {
-		logger.Error("listScorecardScores", "Error", err)
-		return nil, err
+		logger.Error("listScorecardScores getScorecard", "Error", err)
+		return err
 	}
 	// Make a map of rule identifier to CortexRule
 	rules := make(map[string]*CortexRuleInfo)
@@ -145,18 +159,26 @@ func listScorecardScores(ctx context.Context, d *plugin.QueryData, h *plugin.Hyd
 	var response CortexScorecardScoreResponse
 	var page int = 0
 	for {
-		err := client.
+		resp := client.
 			Get("/api/v1/scorecards/{tag}/scores").
 			SetPathParam("tag", scorecardTag).
 			// Pagination
 			SetQueryParam("pageSize", "1000").
 			SetQueryParam("page", strconv.Itoa(page)).
-			Do(ctx).
-			Into(&response)
-		if err != nil {
-			logger.Error("listScorecardScores", "Error", err)
-			return nil, err
+			Do(ctx)
+
+		// Check for HTTP errors
+		if resp.IsErrorState() {
+			logger.Error("listScorecardScores getScores", "Status", resp.Status, "Body", resp.String())
+			return fmt.Errorf("error from cortex API %s: %s", resp.Status, resp.String())
 		}
+		// Unmarshal the response and check for unmarshal errors
+		err := resp.Into(&response)
+		if err != nil {
+			logger.Error("listScorecardScores getScores", "page", page, "Error", err)
+			return err
+		}
+
 		for _, result := range response.ServiceScores {
 			for _, ruleScore := range result.Score.Rules {
 				// Get the rule info
@@ -173,10 +195,10 @@ func listScorecardScores(ctx context.Context, d *plugin.QueryData, h *plugin.Hyd
 					RuleInfo:      ruleInfo,
 				}
 				// send the item to steampipe
-				d.StreamListItem(ctx, row)
+				writer.StreamListItem(ctx, row)
 				// Context can be cancelled due to manual cancellation or the limit has been hit
-				if d.RowsRemaining(ctx) == 0 {
-					return nil, nil
+				if writer.RowsRemaining(ctx) == 0 {
+					return nil
 				}
 			}
 		}
@@ -185,5 +207,5 @@ func listScorecardScores(ctx context.Context, d *plugin.QueryData, h *plugin.Hyd
 			break
 		}
 	}
-	return nil, nil
+	return nil
 }
