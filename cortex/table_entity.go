@@ -163,7 +163,7 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 		// Unmarshal the response and check for unmarshal errors
 		err := resp.Into(&response)
 		if err != nil {
-			logger.Error("listEntities", "Error", err)
+			logger.Error("listEntities", "page", page, "Error", err)
 			return err
 		}
 
