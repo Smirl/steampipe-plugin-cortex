@@ -25,7 +25,10 @@ jobs:
         go-version-file: go.mod
 
     - name: Run tests
-      run: go test ./...
+      run: go test -v -coverprofile cover.out ./...
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
 
     - name: Release Drafter
       uses: release-drafter/release-drafter@v6
