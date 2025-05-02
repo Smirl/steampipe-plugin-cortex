@@ -2,8 +2,10 @@ package cortex
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -21,7 +23,7 @@ func tableCortexDescriptor() *plugin.Table {
 		Name:        "cortex_descriptor",
 		Description: "Cortex openapi descriptors.",
 		List: &plugin.ListConfig{
-			Hydrate: listDescriptors,
+			Hydrate: listDescriptorsHydrator,
 		},
 		Columns: []*plugin.Column{
 			{Name: "tag", Type: proto.ColumnType_STRING, Description: "The x-cortex-tag of the entity."},
@@ -44,40 +46,56 @@ func tableCortexDescriptor() *plugin.Table {
 	}
 }
 
-func listDescriptors(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
-	logger := plugin.Logger(ctx)
+func listDescriptorsHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	config := GetConfig(d.Connection)
 	client := CortexHTTPClient(ctx, config)
+	hydratorWriter := QueryDataWriter{d}
+	return nil, listDescriptors(ctx, client, &hydratorWriter)
+}
 
+func listDescriptors(ctx context.Context, client *req.Client, writer HydratorWriter) error {
+	logger := plugin.Logger(ctx)
 	var response CortexDescriptorsResponse
 	var page int = 0
 	for {
 		logger.Debug("listDescriptors", "page", page)
-		err := client.
+		resp := client.
 			Get("/api/v1/catalog/descriptors").
 			// Options
 			SetQueryParam("yaml", "false").
 			// Pagination
 			SetQueryParam("pageSize", "1000").
 			SetQueryParam("page", strconv.Itoa(page)).
-			Do(ctx).
-			Into(&response)
+			Do(ctx)
+
+		// Check for HTTP errors
+		if resp.IsErrorState() {
+			logger.Error("listDescriptors", "Status", resp.Status, "Body", resp.String())
+			return fmt.Errorf("error from cortex API %s: %s", resp.Status, resp.String())
+		}
+
+		// Unmarshal the response and check for unmarshal errors
+		err := resp.Into(&response)
 		if err != nil {
 			logger.Error("listDescriptors", "Error", err)
-			return nil, err
+			return err
 		}
+
+		// Stream each row from the response, stop if we hit the limit
 		for _, result := range response.Descriptors {
 			// send the item to steampipe
-			d.StreamListItem(ctx, result.Info)
+			writer.StreamListItem(ctx, result.Info)
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
+			if writer.RowsRemaining(ctx) == 0 {
+				return nil
 			}
 		}
+
+		// Check if we have more pages
 		page++
 		if page >= response.TotalPages {
 			break
 		}
 	}
-	return nil, nil
+	return nil
 }

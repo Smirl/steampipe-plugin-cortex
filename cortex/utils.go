@@ -6,6 +6,7 @@ import (
 
 	"github.com/imroc/req/v3"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	"gopkg.in/yaml.v3"
 )
@@ -48,4 +49,49 @@ func TagArrayToMap(ctx context.Context, d *transform.TransformData) (interface{}
 		result[value.Key] = value.Value.Value()
 	}
 	return result, nil
+}
+
+// Writer is a generic interface to stream items of any type.
+type HydratorWriter interface {
+	StreamListItem(ctx context.Context, items ...interface{})
+	RowsRemaining(ctx context.Context) int64
+}
+
+// Production implementation that wraps a *plugin.QueryData.
+type QueryDataWriter struct {
+	QueryData *plugin.QueryData
+}
+
+func (h *QueryDataWriter) StreamListItem(ctx context.Context, items ...interface{}) {
+	h.QueryData.StreamListItem(ctx, items...)
+}
+
+func (h *QueryDataWriter) RowsRemaining(ctx context.Context) int64 {
+	return h.QueryData.RowsRemaining(ctx)
+}
+
+// Testing implementation that writes to a slice up to a fixed limit.
+type SliceWriter[T any] struct {
+	Limit int64
+	Items []T
+}
+
+// NewSliceWriter creates a new SliceWriter with the given limit.
+func NewSliceWriter[T any](limit int64) *SliceWriter[T] {
+	return &SliceWriter[T]{
+		Limit: limit,
+		Items: make([]T, 0, limit),
+	}
+}
+
+func (s *SliceWriter[T]) StreamListItem(ctx context.Context, items ...interface{}) {
+	for _, item := range items {
+		if typedItem, ok := item.(T); ok {
+			s.Items = append(s.Items, typedItem)
+		}
+	}
+}
+
+func (s *SliceWriter[T]) RowsRemaining(ctx context.Context) int64 {
+	return s.Limit - int64(len(s.Items))
 }
