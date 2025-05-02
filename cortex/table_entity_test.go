@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -104,4 +106,51 @@ func TestListEntitiesError(t *testing.T) {
 	err := listEntities(ctx, client, writer, "false", "")
 	g.Expect(err).ToNot(BeNil())
 	g.Expect(err.Error()).To(Equal("error from cortex API 500 Internal Server Error: {\"details\": \"fake error on page 0\"}"))
+}
+
+func TestTableCortexEntity(t *testing.T) {
+	g := NewWithT(t)
+	table := tableCortexEntity()
+
+	// Check basic table properties.
+	g.Expect(table).ToNot(BeNil())
+	g.Expect(table.Name).To(Equal("cortex_entity"))
+	g.Expect(table.Description).To(Equal("Cortex list entities api."))
+
+	// Check list configuration.
+	g.Expect(table.List).ToNot(BeNil())
+	g.Expect(table.List.Hydrate).ToNot(BeNil())
+	g.Expect(table.List.KeyColumns).To(HaveLen(2))
+	g.Expect(table.List.KeyColumns[0].Name).To(Equal("archived"))
+	g.Expect(table.List.KeyColumns[0].Require).To(Equal(plugin.Optional))
+	g.Expect(table.List.KeyColumns[1].Name).To(Equal("type"))
+	g.Expect(table.List.KeyColumns[1].Require).To(Equal(plugin.Optional))
+
+	// Define expected columns.
+	expectedColumns := []struct {
+		Name string
+		Type proto.ColumnType
+	}{
+		{"name", proto.ColumnType_STRING},
+		{"tag", proto.ColumnType_STRING},
+		{"description", proto.ColumnType_STRING},
+		{"type", proto.ColumnType_STRING},
+		{"parents", proto.ColumnType_JSON},
+		{"groups", proto.ColumnType_JSON},
+		{"metadata", proto.ColumnType_JSON},
+		{"last_updated", proto.ColumnType_TIMESTAMP},
+		{"links", proto.ColumnType_JSON},
+		{"archived", proto.ColumnType_BOOL},
+		{"repository", proto.ColumnType_STRING},
+		{"slack_channels", proto.ColumnType_JSON},
+		{"owner_teams", proto.ColumnType_JSON},
+		{"owner_individuals", proto.ColumnType_JSON},
+	}
+
+	// Check that the table has the expected columns.
+	g.Expect(table.Columns).To(HaveLen(len(expectedColumns)))
+	for i, exp := range expectedColumns {
+		g.Expect(table.Columns[i].Name).To(Equal(exp.Name))
+		g.Expect(table.Columns[i].Type).To(Equal(exp.Type))
+	}
 }

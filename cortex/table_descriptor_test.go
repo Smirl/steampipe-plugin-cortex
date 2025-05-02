@@ -12,6 +12,7 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	"gopkg.in/yaml.v3"
 
+	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/context_key"
 )
 
@@ -47,6 +48,50 @@ func prepareDescriptorResponse(t *testing.T, descriptors []Cortex, page, totalPa
 		t.Fatalf("Failed to marshal response: %v", err)
 	}
 	return responseBytes
+}
+
+func TestTableCortexDescriptor(t *testing.T) {
+	g := NewWithT(t)
+	table := tableCortexDescriptor()
+
+	// Check basic table properties.
+	g.Expect(table).ToNot(BeNil())
+	g.Expect(table.Name).To(Equal("cortex_descriptor"))
+	g.Expect(table.Description).To(Equal("Cortex openapi descriptors."))
+
+	// Check list configuration.
+	g.Expect(table.List).ToNot(BeNil())
+	g.Expect(table.List.Hydrate).ToNot(BeNil())
+
+	// Define expected columns.
+	expectedColumns := []struct {
+		Name string
+		Type proto.ColumnType
+	}{
+		{"tag", proto.ColumnType_STRING},
+		{"title", proto.ColumnType_STRING},
+		{"description", proto.ColumnType_STRING},
+		{"type", proto.ColumnType_STRING},
+		{"parents", proto.ColumnType_JSON},
+		{"groups", proto.ColumnType_JSON},
+		{"team", proto.ColumnType_JSON},
+		{"owners", proto.ColumnType_JSON},
+		{"slack", proto.ColumnType_JSON},
+		{"links", proto.ColumnType_JSON},
+		{"metadata", proto.ColumnType_JSON},
+		{"repository", proto.ColumnType_STRING},
+		{"victorops", proto.ColumnType_STRING},
+		{"jira", proto.ColumnType_JSON},
+		{"slos", proto.ColumnType_JSON},
+		{"static_analysis", proto.ColumnType_JSON},
+	}
+
+	// Check that the table has the expected columns.
+	g.Expect(table.Columns).To(HaveLen(len(expectedColumns)))
+	for i, exp := range expectedColumns {
+		g.Expect(table.Columns[i].Name).To(Equal(exp.Name))
+		g.Expect(table.Columns[i].Type).To(Equal(exp.Type))
+	}
 }
 
 // --- Tests for listDescriptors ---
