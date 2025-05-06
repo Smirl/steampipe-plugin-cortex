@@ -2,7 +2,7 @@
 organization: smirl
 category: ["software development"]
 icon_url: "/images/plugins/smirl/cortex.svg"
-brand_color: "#653ee8"
+brand_color: "#7458DB"
 display_name: "Cortex"
 short_name: "cortex"
 description: "Steampipe plugin for Cortex developer portal."
