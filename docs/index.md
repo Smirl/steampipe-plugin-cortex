@@ -25,7 +25,14 @@ drive action to continuously improve software.
 For example:
 
 ```sql
-select tag, owner_teams, metadata -> 'custom_field' from cortex_entity limit 10
+select 
+  tag, 
+  owner_teams, 
+  metadata -> 'custom_field' 
+from 
+  cortex_entity 
+limit 
+  10;
 ```
 
 ## Documentation
