@@ -1,9 +1,8 @@
 # Scorecard Scores Table
 
-## Description
-Description of the Scorecard Scores table.
+This table calls the List Scorecard API to get the data about each score. 
 
-## SQL Examples
+## Examples
 
 ### Query scores for a specific scorecard
 

@@ -1,13 +1,13 @@
 ---
-organization: smirl
+organization: Smirl
 category: ["software development"]
-icon_url: "/images/plugins/smirl/cortex.svg"
+icon_url: "/images/plugins/Smirl/cortex.svg"
 brand_color: "#7458DB"
 display_name: "Cortex"
 short_name: "cortex"
 description: "Steampipe plugin for Cortex developer portal."
 og_description: "The Internal Developer Portal eliminating “developer tax” with paved paths to production"
-og_image: "/images/plugins/smirl/cortex-social-graphic.png"
+og_image: "/images/plugins/Smirl/cortex-social-graphic.png"
 engines: ["steampipe", "sqlite", "postgres", "export"]
 ---
 
@@ -83,4 +83,4 @@ connection "cortex" {
 
 ## Get Involved
 
-Open source: https://github.com/smirl/steampipe-plugin-cortex
+Open source: https://github.com/Smirl/steampipe-plugin-cortex
