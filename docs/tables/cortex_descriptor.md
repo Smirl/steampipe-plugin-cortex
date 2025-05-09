@@ -1,4 +1,4 @@
-# Cortex Entity Table
+# Cortex Descriptor Table
 
 This table calls the List entity descriptors API to get the data about each
 entity descriptor (yaml definition). To see information about the entity from
