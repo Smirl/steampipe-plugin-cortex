@@ -1,4 +1,4 @@
-# Scorecard Scores Table
+# Cortex Scorecard Scores Table
 
 This table calls the List Scorecard API to get the data about each score. 
 
