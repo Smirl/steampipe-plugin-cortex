@@ -59,6 +59,7 @@ func Plugin(ctx context.Context) *plugin.Plugin {
 			"cortex_entity":          tableCortexEntity(),
 			"cortex_team":            tableCortexTeam(),
 			"cortex_scorecard_score": tableCortexScorecardScore(),
+			"cortex_packages":        tableCortexPackage(),
 		},
 	}
 	return p
