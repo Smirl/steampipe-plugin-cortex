@@ -87,6 +87,7 @@ func tableCortexEntity() *plugin.Table {
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "archived", Require: plugin.Optional},
 				{Name: "type", Require: plugin.Optional},
+				{Name: "group", Require: plugin.Optional, Operators: []string{"="}},
 			},
 		},
 		Columns: []*plugin.Column{
@@ -96,6 +97,7 @@ func tableCortexEntity() *plugin.Table {
 			{Name: "type", Type: proto.ColumnType_STRING, Description: "Entity Type."},
 			{Name: "parents", Type: proto.ColumnType_JSON, Description: "Parents of the entity.", Transform: FromStructSlice[CortexTag]("Hierarchy.Parents", "Tag")},
 			{Name: "groups", Type: proto.ColumnType_JSON, Description: "Groups, kind of like tags."},
+			{Name: "group", Type: proto.ColumnType_STRING, Description: "Filter helper: single group value used in WHERE.", Transform: transform.FromQual("group")},
 			{Name: "metadata", Type: proto.ColumnType_JSON, Description: "Raw custom metadata", Transform: transform.FromField("Metadata").Transform(TagArrayToMap)},
 			{Name: "last_updated", Type: proto.ColumnType_TIMESTAMP, Description: "Last updated time."},
 			{Name: "links", Type: proto.ColumnType_JSON, Description: "List of links", Transform: FromStructSlice[CortexLink]("Links", "Url")},
@@ -125,12 +127,15 @@ func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.Hy
 		// When doing a "where in ()" steampipe does multiple separate calls to listEntities
 		types = d.EqualsQuals["type"].GetStringValue()
 	}
-
-	logger.Info("listEntitiesHydrator", "archived", archived, "types", types)
-	return nil, listEntities(ctx, client, &hydratorWriter, archived, types)
+	groups := ""
+	if d.EqualsQuals["group"] != nil {
+		groups = d.EqualsQuals["group"].GetStringValue()
+	}
+	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
+	return nil, listEntities(ctx, client, &hydratorWriter, archived, types, groups)
 }
 
-func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter, archived string, types string) error {
+func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter, archived string, types string, groups string) error {
 	logger := plugin.Logger(ctx)
 
 	var response CortexEntityResponse
@@ -142,6 +147,7 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 			// Filters
 			SetQueryParam("includeArchived", archived).
 			SetQueryParam("types", types).
+			SetQueryParam("groups", groups).
 			// Options
 			SetQueryParam("yaml", "false").
 			SetQueryParam("includeMetadata", "true").

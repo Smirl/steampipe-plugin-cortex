@@ -43,7 +43,7 @@ func TestListEntitiesSinglePage(t *testing.T) {
 
 	writer := NewSliceWriter[CortexEntityElement](100)
 
-	err := listEntities(ctx, client, writer, "false", "")
+	err := listEntities(ctx, client, writer, "false", "", "")
 	g.Expect(err).To(BeNil())
 
 	g.Expect(writer.Items).To(HaveLen(1))
@@ -79,7 +79,7 @@ func TestListEntitiesMultiPage(t *testing.T) {
 
 	writer := NewSliceWriter[CortexEntityElement](100)
 
-	err := listEntities(ctx, client, writer, "false", "")
+	err := listEntities(ctx, client, writer, "false", "", "")
 	g.Expect(err).To(BeNil())
 
 	g.Expect(writer.Items).To(HaveLen(3))
@@ -103,9 +103,33 @@ func TestListEntitiesError(t *testing.T) {
 
 	writer := NewSliceWriter[CortexEntityElement](100)
 
-	err := listEntities(ctx, client, writer, "false", "")
+	err := listEntities(ctx, client, writer, "false", "", "")
 	g.Expect(err).ToNot(BeNil())
 	g.Expect(err.Error()).To(Equal("error from cortex API 500 Internal Server Error: {\"details\": \"fake error on page 0\"}"))
+}
+
+func TestListEntitiesWithGroups(t *testing.T) {
+	g := NewWithT(t)
+	gh := ghttp.NewGHTTPWithGomega(g)
+
+	responseBytes := prepareEntityResponse(t, []CortexEntityElement{{Name: "entity1", Groups: []string{"platform"}}}, 0, 1, 1)
+
+	ctx, server, client := setupTestServerAndClient(t,
+		ghttp.CombineHandlers(
+			gh.VerifyRequest("GET", "/api/v1/catalog"),
+			gh.VerifyHeaderKV("Authorization", "Bearer fake_api_key"),
+			gh.RespondWith(http.StatusOK, responseBytes, nil),
+		),
+	)
+	defer server.Close()
+
+	writer := NewSliceWriter[CortexEntityElement](100)
+
+	err := listEntities(ctx, client, writer, "false", "", "platform")
+	g.Expect(err).To(BeNil())
+
+	g.Expect(writer.Items).To(HaveLen(1))
+	g.Expect(writer.Items[0].Name).To(Equal("entity1"))
 }
 
 func TestTableCortexEntity(t *testing.T) {
@@ -120,11 +144,13 @@ func TestTableCortexEntity(t *testing.T) {
 	// Check list configuration.
 	g.Expect(table.List).ToNot(BeNil())
 	g.Expect(table.List.Hydrate).ToNot(BeNil())
-	g.Expect(table.List.KeyColumns).To(HaveLen(2))
+	g.Expect(table.List.KeyColumns).To(HaveLen(3))
 	g.Expect(table.List.KeyColumns[0].Name).To(Equal("archived"))
 	g.Expect(table.List.KeyColumns[0].Require).To(Equal(plugin.Optional))
 	g.Expect(table.List.KeyColumns[1].Name).To(Equal("type"))
 	g.Expect(table.List.KeyColumns[1].Require).To(Equal(plugin.Optional))
+	g.Expect(table.List.KeyColumns[2].Name).To(Equal("group"))
+	g.Expect(table.List.KeyColumns[2].Require).To(Equal(plugin.Optional))
 
 	// Define expected columns.
 	expectedColumns := []struct {
@@ -137,6 +163,7 @@ func TestTableCortexEntity(t *testing.T) {
 		{"type", proto.ColumnType_STRING},
 		{"parents", proto.ColumnType_JSON},
 		{"groups", proto.ColumnType_JSON},
+		{"group", proto.ColumnType_STRING},
 		{"metadata", proto.ColumnType_JSON},
 		{"last_updated", proto.ColumnType_TIMESTAMP},
 		{"links", proto.ColumnType_JSON},

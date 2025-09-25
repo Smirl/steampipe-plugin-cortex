@@ -52,3 +52,17 @@ where
 limit 
   10;
 ```
+
+### Filter by group
+To filter by a single group, use the singular qualifier column `group` instead of the JSON `groups` column (which is an array). For example:
+
+```sql
+select
+  tag,
+  repository
+from
+  cortex_entity
+where
+  "group" = 'group_name';
+```
+
