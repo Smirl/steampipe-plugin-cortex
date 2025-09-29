@@ -149,7 +149,7 @@ func TestTableCortexEntity(t *testing.T) {
 	g.Expect(table.List.KeyColumns[0].Require).To(Equal(plugin.Optional))
 	g.Expect(table.List.KeyColumns[1].Name).To(Equal("type"))
 	g.Expect(table.List.KeyColumns[1].Require).To(Equal(plugin.Optional))
-	g.Expect(table.List.KeyColumns[2].Name).To(Equal("group"))
+	g.Expect(table.List.KeyColumns[2].Name).To(Equal("groups"))
 	g.Expect(table.List.KeyColumns[2].Require).To(Equal(plugin.Optional))
 
 	// Define expected columns.
@@ -163,7 +163,6 @@ func TestTableCortexEntity(t *testing.T) {
 		{"type", proto.ColumnType_STRING},
 		{"parents", proto.ColumnType_JSON},
 		{"groups", proto.ColumnType_JSON},
-		{"group", proto.ColumnType_STRING},
 		{"metadata", proto.ColumnType_JSON},
 		{"last_updated", proto.ColumnType_TIMESTAMP},
 		{"links", proto.ColumnType_JSON},

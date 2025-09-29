@@ -3,12 +3,12 @@ package cortex
 import (
 	"context"
 	"fmt"
-	"strconv"
-
 	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/quals"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
+	"strconv"
 )
 
 type ScalarOrMap struct {
@@ -87,7 +87,7 @@ func tableCortexEntity() *plugin.Table {
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "archived", Require: plugin.Optional},
 				{Name: "type", Require: plugin.Optional},
-				{Name: "group", Require: plugin.Optional, Operators: []string{"="}},
+				{Name: "groups", Require: plugin.Optional, Operators: []string{"?"}},
 			},
 		},
 		Columns: []*plugin.Column{
@@ -97,7 +97,6 @@ func tableCortexEntity() *plugin.Table {
 			{Name: "type", Type: proto.ColumnType_STRING, Description: "Entity Type."},
 			{Name: "parents", Type: proto.ColumnType_JSON, Description: "Parents of the entity.", Transform: FromStructSlice[CortexTag]("Hierarchy.Parents", "Tag")},
 			{Name: "groups", Type: proto.ColumnType_JSON, Description: "Groups, kind of like tags."},
-			{Name: "group", Type: proto.ColumnType_STRING, Description: "Filter helper: single group value used in WHERE.", Transform: transform.FromQual("group")},
 			{Name: "metadata", Type: proto.ColumnType_JSON, Description: "Raw custom metadata", Transform: transform.FromField("Metadata").Transform(TagArrayToMap)},
 			{Name: "last_updated", Type: proto.ColumnType_TIMESTAMP, Description: "Last updated time."},
 			{Name: "links", Type: proto.ColumnType_JSON, Description: "List of links", Transform: FromStructSlice[CortexLink]("Links", "Url")},
@@ -128,8 +127,13 @@ func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.Hy
 		types = d.EqualsQuals["type"].GetStringValue()
 	}
 	groups := ""
-	if d.EqualsQuals["group"] != nil {
-		groups = d.EqualsQuals["group"].GetStringValue()
+	if d.Quals["groups"] != nil {
+		for _, q := range d.Quals["groups"].Quals {
+			if q.Operator == quals.QualOperatorJsonbExistsOne {
+				groups = q.Value.GetStringValue()
+			}
+
+		}
 	}
 	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
 	return nil, listEntities(ctx, client, &hydratorWriter, archived, types, groups)
