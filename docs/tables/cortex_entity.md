@@ -54,7 +54,7 @@ limit
 ```
 
 ### Filter by group
-To filter by a single group, use the singular qualifier column `group` instead of the JSON `groups` column (which is an array). For example:
+To filter by a single group, use the JSONB `?` operator. For example:
 
 ```sql
 select
@@ -63,6 +63,6 @@ select
 from
   cortex_entity
 where
-  "group" = 'group_name';
+  "groups" ? 'group_name';
 ```
 
