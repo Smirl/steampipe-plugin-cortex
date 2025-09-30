@@ -3,12 +3,14 @@ package cortex
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/quals"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
-	"strconv"
 )
 
 type ScalarOrMap struct {
@@ -87,7 +89,7 @@ func tableCortexEntity() *plugin.Table {
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "archived", Require: plugin.Optional},
 				{Name: "type", Require: plugin.Optional},
-				{Name: "groups", Require: plugin.Optional, Operators: []string{"?"}},
+				{Name: "groups", Require: plugin.Optional, Operators: []string{"=", "?", "?|"}},
 			},
 		},
 		Columns: []*plugin.Column{
@@ -127,12 +129,12 @@ func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.Hy
 		types = d.EqualsQuals["type"].GetStringValue()
 	}
 	groups := ""
+	logger.Debug("listEntitiesHydrator", "quals", d.Quals)
 	if d.Quals["groups"] != nil {
-		for _, q := range d.Quals["groups"].Quals {
-			if q.Operator == quals.QualOperatorJsonbExistsOne {
-				groups = q.Value.GetStringValue()
-			}
-
+		groupFilters := buildGroupFilters(d.Quals["groups"].Quals)
+		logger.Debug("listEntitiesHydrator", "groupFilters", groupFilters)
+		if len(groupFilters) > 0 {
+			groups = strings.Join(groupFilters, ",")
 		}
 	}
 	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
@@ -195,4 +197,25 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 		}
 	}
 	return nil
+}
+
+func buildGroupFilters(groupQuals []*quals.Qual) []string {
+	var groupFilters []string
+	for _, q := range groupQuals {
+		switch q.Operator {
+		case quals.QualOperatorJsonbExistsOne, quals.QualOperatorEqual:
+			if value := q.Value.GetStringValue(); value != "" {
+				groupFilters = append(groupFilters, value)
+			}
+		case quals.QualOperatorJsonbExistsAny:
+			if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						groupFilters = append(groupFilters, value)
+					}
+				}
+			}
+		}
+	}
+	return groupFilters
 }

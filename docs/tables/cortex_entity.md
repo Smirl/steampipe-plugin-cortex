@@ -66,3 +66,14 @@ where
   "groups" ? 'group_name';
 ```
 
+To match entities that belong to any of several groups, use the JSONB `?|` operator:
+
+```sql
+select
+  tag,
+  repository
+from
+  cortex_entity
+where
+  "groups" ?| array['group_a', 'group_b'];
+```

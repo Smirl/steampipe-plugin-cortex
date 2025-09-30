@@ -8,6 +8,7 @@ import (
 	"github.com/onsi/gomega/ghttp"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/quals"
 	"gopkg.in/yaml.v3"
 )
 
@@ -132,6 +133,50 @@ func TestListEntitiesWithGroups(t *testing.T) {
 	g.Expect(writer.Items[0].Name).To(Equal("entity1"))
 }
 
+func TestBuildGroupFilters(t *testing.T) {
+	testCases := []struct {
+		name     string
+		quals    []*quals.Qual
+		expected []string
+	}{
+		{
+			name:     "exists one",
+			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorJsonbExistsOne, "group_a")},
+			expected: []string{"group_a"},
+		},
+		{
+			name:     "equals",
+			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorEqual, "group_b")},
+			expected: []string{"group_b"},
+		},
+		{
+			name:     "exists any",
+			quals:    []*quals.Qual{listGroupQual(quals.QualOperatorJsonbExistsAny, "group_a", "group_b")},
+			expected: []string{"group_a", "group_b"},
+		},
+		{
+			name: "mixed",
+			quals: []*quals.Qual{
+				stringGroupQual(quals.QualOperatorJsonbExistsOne, "group_a"),
+				listGroupQual(quals.QualOperatorJsonbExistsAny, "group_b", "group_c"),
+			},
+			expected: []string{"group_a", "group_b", "group_c"},
+		},
+		{
+			name:     "unsupported operator",
+			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorJsonbContainsLeftRight, "group_a")},
+			expected: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(buildGroupFilters(tc.quals)).To(Equal(tc.expected))
+		})
+	}
+}
+
 func TestTableCortexEntity(t *testing.T) {
 	g := NewWithT(t)
 	table := tableCortexEntity()
@@ -178,5 +223,31 @@ func TestTableCortexEntity(t *testing.T) {
 	for i, exp := range expectedColumns {
 		g.Expect(table.Columns[i].Name).To(Equal(exp.Name))
 		g.Expect(table.Columns[i].Type).To(Equal(exp.Type))
+	}
+}
+
+func stringGroupQual(operator, value string) *quals.Qual {
+	return &quals.Qual{
+		Column:   "groups",
+		Operator: operator,
+		Value: &proto.QualValue{
+			Value: &proto.QualValue_StringValue{StringValue: value},
+		},
+	}
+}
+
+func listGroupQual(operator string, values ...string) *quals.Qual {
+	list := make([]*proto.QualValue, 0, len(values))
+	for _, v := range values {
+		list = append(list, &proto.QualValue{Value: &proto.QualValue_StringValue{StringValue: v}})
+	}
+	return &quals.Qual{
+		Column:   "groups",
+		Operator: operator,
+		Value: &proto.QualValue{
+			Value: &proto.QualValue_ListValue{
+				ListValue: &proto.QualValueList{Values: list},
+			},
+		},
 	}
 }
