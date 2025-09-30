@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/quals"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
@@ -87,6 +89,7 @@ func tableCortexEntity() *plugin.Table {
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "archived", Require: plugin.Optional},
 				{Name: "type", Require: plugin.Optional},
+				{Name: "groups", Require: plugin.Optional, Operators: []string{"=", "?", "?|"}},
 			},
 		},
 		Columns: []*plugin.Column{
@@ -120,17 +123,22 @@ func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.Hy
 		logger.Debug("listEntitiesHydrator", "archived", d.EqualsQuals["archived"])
 		archived = "true"
 	}
+
 	types := ""
-	if d.EqualsQuals["type"] != nil {
-		// When doing a "where in ()" steampipe does multiple separate calls to listEntities
-		types = d.EqualsQuals["type"].GetStringValue()
+	if d.Quals["type"] != nil {
+		types = buildListFilter(d.Quals["type"].Quals)
 	}
 
-	logger.Info("listEntitiesHydrator", "archived", archived, "types", types)
-	return nil, listEntities(ctx, client, &hydratorWriter, archived, types)
+	groups := ""
+	if d.Quals["groups"] != nil {
+		groups = buildListFilter(d.Quals["groups"].Quals)
+	}
+
+	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
+	return nil, listEntities(ctx, client, &hydratorWriter, archived, types, groups)
 }
 
-func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter, archived string, types string) error {
+func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter, archived string, types string, groups string) error {
 	logger := plugin.Logger(ctx)
 
 	var response CortexEntityResponse
@@ -142,6 +150,7 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 			// Filters
 			SetQueryParam("includeArchived", archived).
 			SetQueryParam("types", types).
+			SetQueryParam("groups", groups).
 			// Options
 			SetQueryParam("yaml", "false").
 			SetQueryParam("includeMetadata", "true").
@@ -185,4 +194,41 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 		}
 	}
 	return nil
+}
+
+// buildListFilter constructs a comma-separated string of group filters from the provided quals.
+func buildListFilter(groupQuals []*quals.Qual) string {
+	var values []string
+	for _, q := range groupQuals {
+		switch q.Operator {
+		case quals.QualOperatorEqual:
+			// Handle both single string and list of strings
+			if value := q.Value.GetStringValue(); value != "" {
+				values = append(values, value)
+			} else if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						values = append(values, value)
+					}
+				}
+			}
+		case quals.QualOperatorJsonbExistsOne:
+			if value := q.Value.GetStringValue(); value != "" {
+				values = append(values, value)
+			}
+		case quals.QualOperatorJsonbExistsAny:
+			if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						values = append(values, value)
+					}
+				}
+			}
+		}
+	}
+	filter := ""
+	if len(values) > 0 {
+		filter = strings.Join(values, ",")
+	}
+	return filter
 }

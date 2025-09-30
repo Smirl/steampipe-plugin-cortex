@@ -52,3 +52,28 @@ where
 limit 
   10;
 ```
+
+### Filter by group
+To filter by a single group, use the JSONB `?` operator. For example:
+
+```sql
+select
+  tag,
+  repository
+from
+  cortex_entity
+where
+  "groups" ? 'group_name';
+```
+
+To match entities that belong to any of several groups, use the JSONB `?|` operator:
+
+```sql
+select
+  tag,
+  repository
+from
+  cortex_entity
+where
+  "groups" ?| array['group_a', 'group_b'];
+```
