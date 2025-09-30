@@ -123,20 +123,17 @@ func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.Hy
 		logger.Debug("listEntitiesHydrator", "archived", d.EqualsQuals["archived"])
 		archived = "true"
 	}
+
 	types := ""
-	if d.EqualsQuals["type"] != nil {
-		// When doing a "where in ()" steampipe does multiple separate calls to listEntities
-		types = d.EqualsQuals["type"].GetStringValue()
+	if d.Quals["type"] != nil {
+		types = buildListFilter(d.Quals["type"].Quals)
 	}
+
 	groups := ""
-	logger.Debug("listEntitiesHydrator", "quals", d.Quals)
 	if d.Quals["groups"] != nil {
-		groupFilters := buildGroupFilters(d.Quals["groups"].Quals)
-		logger.Debug("listEntitiesHydrator", "groupFilters", groupFilters)
-		if len(groupFilters) > 0 {
-			groups = strings.Join(groupFilters, ",")
-		}
+		groups = buildListFilter(d.Quals["groups"].Quals)
 	}
+
 	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
 	return nil, listEntities(ctx, client, &hydratorWriter, archived, types, groups)
 }
@@ -199,23 +196,39 @@ func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter
 	return nil
 }
 
-func buildGroupFilters(groupQuals []*quals.Qual) []string {
-	var groupFilters []string
+// buildListFilter constructs a comma-separated string of group filters from the provided quals.
+func buildListFilter(groupQuals []*quals.Qual) string {
+	var values []string
 	for _, q := range groupQuals {
 		switch q.Operator {
-		case quals.QualOperatorJsonbExistsOne, quals.QualOperatorEqual:
+		case quals.QualOperatorEqual:
+			// Handle both single string and list of strings
 			if value := q.Value.GetStringValue(); value != "" {
-				groupFilters = append(groupFilters, value)
+				values = append(values, value)
+			} else if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						values = append(values, value)
+					}
+				}
+			}
+		case quals.QualOperatorJsonbExistsOne:
+			if value := q.Value.GetStringValue(); value != "" {
+				values = append(values, value)
 			}
 		case quals.QualOperatorJsonbExistsAny:
 			if listValue := q.Value.GetListValue(); listValue != nil {
 				for _, v := range listValue.Values {
 					if value := v.GetStringValue(); value != "" {
-						groupFilters = append(groupFilters, value)
+						values = append(values, value)
 					}
 				}
 			}
 		}
 	}
-	return groupFilters
+	filter := ""
+	if len(values) > 0 {
+		filter = strings.Join(values, ",")
+	}
+	return filter
 }

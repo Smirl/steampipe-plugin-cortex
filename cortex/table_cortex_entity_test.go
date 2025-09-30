@@ -133,26 +133,31 @@ func TestListEntitiesWithGroups(t *testing.T) {
 	g.Expect(writer.Items[0].Name).To(Equal("entity1"))
 }
 
-func TestBuildGroupFilters(t *testing.T) {
+func TestBuildListFilter(t *testing.T) {
 	testCases := []struct {
 		name     string
 		quals    []*quals.Qual
-		expected []string
+		expected string
 	}{
 		{
 			name:     "exists one",
 			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorJsonbExistsOne, "group_a")},
-			expected: []string{"group_a"},
+			expected: "group_a",
 		},
 		{
 			name:     "equals",
 			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorEqual, "group_b")},
-			expected: []string{"group_b"},
+			expected: "group_b",
+		},
+		{
+			name:     "equals any",
+			quals:    []*quals.Qual{listGroupQual(quals.QualOperatorEqual, "group_a", "group_b")},
+			expected: "group_a,group_b",
 		},
 		{
 			name:     "exists any",
 			quals:    []*quals.Qual{listGroupQual(quals.QualOperatorJsonbExistsAny, "group_a", "group_b")},
-			expected: []string{"group_a", "group_b"},
+			expected: "group_a,group_b",
 		},
 		{
 			name: "mixed",
@@ -160,19 +165,27 @@ func TestBuildGroupFilters(t *testing.T) {
 				stringGroupQual(quals.QualOperatorJsonbExistsOne, "group_a"),
 				listGroupQual(quals.QualOperatorJsonbExistsAny, "group_b", "group_c"),
 			},
-			expected: []string{"group_a", "group_b", "group_c"},
+			expected: "group_a,group_b,group_c",
+		},
+		{
+			name: "mixed many",
+			quals: []*quals.Qual{
+				listGroupQual(quals.QualOperatorEqual, "group_a", "group_b"),
+				listGroupQual(quals.QualOperatorJsonbExistsAny, "group_c", "group_d"),
+			},
+			expected: "group_a,group_b,group_c,group_d",
 		},
 		{
 			name:     "unsupported operator",
 			quals:    []*quals.Qual{stringGroupQual(quals.QualOperatorJsonbContainsLeftRight, "group_a")},
-			expected: nil,
+			expected: "",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildGroupFilters(tc.quals)).To(Equal(tc.expected))
+			g.Expect(buildListFilter(tc.quals)).To(Equal(tc.expected))
 		})
 	}
 }
