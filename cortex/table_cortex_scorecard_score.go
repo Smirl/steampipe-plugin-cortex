@@ -63,9 +63,10 @@ type CortexScore struct {
 }
 
 type CortexRuleScore struct {
-	Expression string `yaml:"expression"`
-	Identifier string `yaml:"identifier"`
-	Score      int    `yaml:"score"`
+	Expression string  `yaml:"expression"`
+	Identifier string  `yaml:"identifier"`
+	Score      int     `yaml:"score"`
+	Error      *string `yaml:"error"`
 }
 
 // Used to represent the data we want to return in the table
@@ -108,6 +109,7 @@ func tableCortexScorecardScore() *plugin.Table {
 			{Name: "rule_level_number", Type: proto.ColumnType_INT, Description: "Rule level number.", Transform: transform.FromField("RuleInfo.LevelNumber")},
 			{Name: "rule_weight", Type: proto.ColumnType_INT, Description: "Rule weight.", Transform: transform.FromField("RuleInfo.Weight")},
 			{Name: "rule_score", Type: proto.ColumnType_INT, Description: "Rule score.", Transform: transform.FromField("RuleScore.Score")},
+			{Name: "rule_error", Type: proto.ColumnType_STRING, Description: "Rule error.", Transform: transform.FromField("RuleScore.Error")},
 			{Name: "rule_pass", Type: proto.ColumnType_BOOL, Description: "Rule pass.", Transform: transform.FromP(transform.MethodValue, "IsRulePass")},
 		},
 	}
