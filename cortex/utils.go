@@ -2,6 +2,8 @@ package cortex
 
 import (
 	"context"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/imroc/req/v3"
@@ -10,12 +12,52 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// The Cortex API is always requested with `yaml=false`, i.e. it returns JSON, but
+// responses are parsed with gopkg.in/yaml.v3 so the structs can share a single set
+// of `yaml:` tags for both this and any genuinely-YAML endpoints. That works for
+// almost all JSON, since JSON is a subset of YAML - except for one case: JSON
+// encodes any character outside the Basic Multilingual Plane (e.g. an emoji) as a
+// *pair* of `\uXXXX` UTF-16 surrogate escapes, whereas yaml.v3's `\uXXXX` escape
+// represents a raw Unicode scalar and always rejects the surrogate range
+// (U+D800-U+DFFF) outright, even when the pair is well-formed. That single invalid
+// escape aborts parsing of the entire response it's part of, so a single Cortex
+// entity with an emoji in e.g. its description can break listing every entity.
+//
+// This resolves surrogate pairs into their real UTF-8 encoding before handing the
+// bytes to yaml.Unmarshal, so it never sees a raw surrogate escape.
+var surrogatePairPattern = regexp.MustCompile(`\\u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})`)
+
+func unescapeSurrogatePairs(data []byte) []byte {
+	return surrogatePairPattern.ReplaceAllFunc(data, func(match []byte) []byte {
+		groups := surrogatePairPattern.FindSubmatch(match)
+
+		high, err := strconv.ParseUint(string(groups[1]), 16, 32)
+		if err != nil {
+			return match
+		}
+		low, err := strconv.ParseUint(string(groups[2]), 16, 32)
+		if err != nil {
+			return match
+		}
+
+		r := (rune(high)-0xD800)<<10 + (rune(low) - 0xDC00) + 0x10000
+		return []byte(string(r))
+	})
+}
+
+// yamlUnmarshalJSON parses a JSON (or YAML) document using yaml.v3, after first
+// resolving any UTF-16 surrogate pair escapes JSON may have produced. See
+// unescapeSurrogatePairs for why that's necessary.
+func yamlUnmarshalJSON(data []byte, v interface{}) error {
+	return yaml.Unmarshal(unescapeSurrogatePairs(data), v)
+}
+
 // Create a req http client for the Cortex API.
 // This will set the BaseURL and Auth from config, as well as common retry settings.
 func CortexHTTPClient(ctx context.Context, config *SteampipeConfig) *req.Client {
 	return req.C().
 		SetBaseURL(*config.BaseURL).
-		SetJsonUnmarshal(yaml.Unmarshal).
+		SetJsonUnmarshal(yamlUnmarshalJSON).
 		SetCommonRetryCount(2).
 		SetCommonRetryBackoffInterval(time.Second, 5*time.Second).
 		SetCommonBearerAuthToken(*config.ApiKey)
