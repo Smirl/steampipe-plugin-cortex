@@ -74,6 +74,7 @@ func TestTableCortexScorecardScore(t *testing.T) {
 		{"rule_level_number", proto.ColumnType_INT},
 		{"rule_weight", proto.ColumnType_INT},
 		{"rule_score", proto.ColumnType_INT},
+		{"rule_error", proto.ColumnType_STRING},
 		{"rule_pass", proto.ColumnType_BOOL},
 	}
 
