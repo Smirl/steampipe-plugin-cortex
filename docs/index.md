@@ -1,13 +1,13 @@
 ---
-organization: smirl
+organization: Smirl
 category: ["software development"]
-icon_url: "/images/plugins/smirl/cortex.svg"
-brand_color: "#25074d"
+icon_url: "/images/plugins/Smirl/cortex.svg"
+brand_color: "#7458DB"
 display_name: "Cortex"
 short_name: "cortex"
 description: "Steampipe plugin for Cortex developer portal."
 og_description: "The Internal Developer Portal eliminating “developer tax” with paved paths to production"
-og_image: "/images/plugins/smirl/cortex-social-graphic.png"
+og_image: "/images/plugins/Smirl/cortex-social-graphic.png"
 engines: ["steampipe", "sqlite", "postgres", "export"]
 ---
 
@@ -25,7 +25,16 @@ drive action to continuously improve software.
 For example:
 
 ```sql
-select * from cortex_entity limit 10
+select 
+  tag,
+  repository,
+  owner_teams
+from 
+  cortex_entity 
+where
+  type = 'service'
+limit 
+  10;
 ```
 
 ## Documentation
@@ -46,7 +55,7 @@ steampipe plugin install smirl/cortex
 
 You will need a Cortex API Token to authenticate with the API.
 
-https://docs.cortex.io/docs/api/cortex-api
+https://docs.cortex.io/api/rest
 
 ### Configuration
 
@@ -60,7 +69,7 @@ Environment variables can be used to override these configuration options.
 
 ```hcl
 connection "cortex" {
-    plugin    = "cortex"
+    plugin    = "smirl/cortex"
 
     # API key from cortex.io for your instance
     # If the environment variable CORTEX_API_KEY is defined it will be overriden
@@ -74,4 +83,4 @@ connection "cortex" {
 
 ## Get Involved
 
-Open source: https://github.com/smirl/steampipe-plugin-cortex
+Open source: https://github.com/Smirl/steampipe-plugin-cortex

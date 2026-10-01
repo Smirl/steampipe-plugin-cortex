@@ -103,6 +103,29 @@ type CortexDependency struct {
 	AWS    CortexDependencyAWS      `yaml:"aws,omitempty"`
 }
 
+// UnmarshalYAML implements custom unmarshaling to gracefully handle malformed dependency data
+func (cd *CortexDependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Create a temporary type to avoid infinite recursion
+	type rawDependency struct {
+		Cortex []CortexDependencyCortex `yaml:"cortex,omitempty"`
+		AWS    CortexDependencyAWS      `yaml:"aws,omitempty"`
+	}
+
+	var raw rawDependency
+	if err := unmarshal(&raw); err != nil {
+		// Log warning but don't fail - set empty defaults
+		// The error will be silently handled, allowing other fields to process
+		cd.Cortex = []CortexDependencyCortex{}
+		cd.AWS = CortexDependencyAWS{Tags: []Tag{}}
+		return nil
+	}
+
+	// Successfully unmarshaled, populate the struct
+	cd.Cortex = raw.Cortex
+	cd.AWS = raw.AWS
+	return nil
+}
+
 type CortexDependencyCortex struct {
 	Tag         string `yaml:"tag"`
 	Path        string `yaml:"path,omitempty"`

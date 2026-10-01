@@ -1,5 +1,5 @@
 connection "cortex" {
-    plugin    = "cortex"
+    plugin    = "smirl/cortex"
 
     # API key from cortex.io for your instance
     # If the environment variable CORTEX_API_KEY is defined it will be overriden

@@ -2,10 +2,14 @@ package cortex
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/imroc/req/v3"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
+	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/quals"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 )
 
@@ -81,10 +85,11 @@ func tableCortexEntity() *plugin.Table {
 		Name:        "cortex_entity",
 		Description: "Cortex list entities api.",
 		List: &plugin.ListConfig{
-			Hydrate: listEntities,
+			Hydrate: listEntitiesHydrator,
 			KeyColumns: []*plugin.KeyColumn{
 				{Name: "archived", Require: plugin.Optional},
 				{Name: "type", Require: plugin.Optional},
+				{Name: "groups", Require: plugin.Optional, Operators: []string{"=", "?", "?|"}},
 			},
 		},
 		Columns: []*plugin.Column{
@@ -106,34 +111,46 @@ func tableCortexEntity() *plugin.Table {
 	}
 }
 
-func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listEntitiesHydrator(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	logger := plugin.Logger(ctx)
 	config := GetConfig(d.Connection)
 	client := CortexHTTPClient(ctx, config)
+	hydratorWriter := QueryDataWriter{d}
 
-	// Archive filter
-	var archived string = "false"
+	// Extract parameters from QueryData
+	archived := "false"
 	if d.EqualsQuals["archived"] != nil && d.EqualsQuals["archived"].GetBoolValue() {
+		logger.Debug("listEntitiesHydrator", "archived", d.EqualsQuals["archived"])
 		archived = "true"
 	}
-	logger.Info("listEntities", "archived", archived)
-	// Type filter
-	// When doing a "where in ()" steampipe does multiple separate calls to listEntities
-	var types string
-	if d.EqualsQuals["type"] != nil {
-		types = d.EqualsQuals["type"].GetStringValue()
+
+	types := ""
+	if d.Quals["type"] != nil {
+		types = buildListFilter(d.Quals["type"].Quals)
 	}
-	logger.Info("listEntities", "types", types)
+
+	groups := ""
+	if d.Quals["groups"] != nil {
+		groups = buildListFilter(d.Quals["groups"].Quals)
+	}
+
+	logger.Info("listEntitiesHydrator", "archived", archived, "types", types, "groups", groups)
+	return nil, listEntities(ctx, client, &hydratorWriter, archived, types, groups)
+}
+
+func listEntities(ctx context.Context, client *req.Client, writer HydratorWriter, archived string, types string, groups string) error {
+	logger := plugin.Logger(ctx)
 
 	var response CortexEntityResponse
 	var page int = 0
 	for {
 		logger.Debug("listEntities", "page", page)
-		err := client.
+		resp := client.
 			Get("/api/v1/catalog").
 			// Filters
 			SetQueryParam("includeArchived", archived).
 			SetQueryParam("types", types).
+			SetQueryParam("groups", groups).
 			// Options
 			SetQueryParam("yaml", "false").
 			SetQueryParam("includeMetadata", "true").
@@ -144,24 +161,74 @@ func listEntities(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateDat
 			// Pagination
 			SetQueryParam("pageSize", "1000").
 			SetQueryParam("page", strconv.Itoa(page)).
-			Do(ctx).
-			Into(&response)
-		if err != nil {
-			logger.Error("listEntities", "Error", err)
-			return nil, err
+			Do(ctx)
+
+		// Check for HTTP errors
+		if resp.IsErrorState() {
+			logger.Error("listEntities", "Status", resp.Status, "Body", resp.String())
+			return fmt.Errorf("error from cortex API %s: %s", resp.Status, resp.String())
 		}
+
+		// Unmarshal the response and check for unmarshal errors
+		err := resp.Into(&response)
+		if err != nil {
+			logger.Error("listEntities", "page", page, "Error", err)
+			return err
+		}
+
+		logger.Debug("listEntities", "totalPages", response.TotalPages, "total", response.Total)
+
 		for _, result := range response.Entities {
 			// send the item to steampipe
-			d.StreamListItem(ctx, result)
+			writer.StreamListItem(ctx, result)
 			// Context can be cancelled due to manual cancellation or the limit has been hit
-			if d.RowsRemaining(ctx) == 0 {
-				return nil, nil
+			if writer.RowsRemaining(ctx) == 0 {
+				logger.Debug("listEntities", "RowsRemaining", writer.RowsRemaining(ctx))
+				return nil
 			}
 		}
 		page++
-		if page == response.TotalPages {
+		if page >= response.TotalPages {
+			logger.Debug("listEntities", "page", page, "totalPages", response.TotalPages)
 			break
 		}
 	}
-	return nil, nil
+	return nil
+}
+
+// buildListFilter constructs a comma-separated string of group filters from the provided quals.
+func buildListFilter(groupQuals []*quals.Qual) string {
+	var values []string
+	for _, q := range groupQuals {
+		switch q.Operator {
+		case quals.QualOperatorEqual:
+			// Handle both single string and list of strings
+			if value := q.Value.GetStringValue(); value != "" {
+				values = append(values, value)
+			} else if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						values = append(values, value)
+					}
+				}
+			}
+		case quals.QualOperatorJsonbExistsOne:
+			if value := q.Value.GetStringValue(); value != "" {
+				values = append(values, value)
+			}
+		case quals.QualOperatorJsonbExistsAny:
+			if listValue := q.Value.GetListValue(); listValue != nil {
+				for _, v := range listValue.Values {
+					if value := v.GetStringValue(); value != "" {
+						values = append(values, value)
+					}
+				}
+			}
+		}
+	}
+	filter := ""
+	if len(values) > 0 {
+		filter = strings.Join(values, ",")
+	}
+	return filter
 }
